@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eoekzmarchive</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        :root { color-scheme: light; }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; min-height: 100%; }
+        body { font-family: 'Inter', sans-serif; background: #fff; color: #111; }
+        @keyframes scroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        .marquee-track { display:flex; width:max-content; animation:scroll 35s linear infinite; will-change:transform; }
+        .marquee-group { display:flex; flex:0 0 auto; align-items:flex-end; gap:1rem; padding-right:1rem; box-sizing:border-box; }
+        .marquee-photo { display:block; width:auto; height:var(--marquee-photo-height, 110px); max-width:min(24vw, 260px); object-fit:contain; background:#fff; border:1px solid #111; flex:0 0 auto; }
+        .marquee-photo.is-portrait { --marquee-photo-height:150px; }
+        .marquee-photo.is-landscape, .marquee-photo.is-square { --marquee-photo-height:100px; }
+        .marquee-container:hover .marquee-track { animation-play-state:paused; }
+        .archive-grid { width:min(100%, 776px); margin:0 auto; display:grid; grid-template-columns:repeat(2,minmax(0,380px)); justify-content:center; align-items:end; column-gap:16px; row-gap:24px; }
+        .archive-grid button { align-self:end; min-width:0; width:100%; display:flex; flex-direction:column; justify-content:flex-end; }
+        .archive-photo { width:100%; height:auto; aspect-ratio:auto; object-fit:contain; display:block; cursor:pointer; background:#fff; }
+        .archive-caption { display:block; min-height:1.25rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .lightbox-fade { animation:fadeIn .2s ease-out forwards; }
+        @keyframes fadeIn { from { opacity:0; transform:scale(.98); } to { opacity:1; transform:scale(1); } }
+
+        /* HOME: one-viewport composition, tuned separately for desktop and phone. */
+        body { min-height:100svh; }
+        #siteHeader { height:58px; flex:0 0 58px; padding:0 clamp(16px,3vw,40px); }
+        /* Keep the four header links floating at the top while Archive scrolls. */
+        #siteHeader { position:sticky; top:0; z-index:40; background:transparent; border:0; outline:0; box-shadow:none; }
+
+        #homeView { min-height:calc(100svh - 58px); height:calc(100svh - 58px); display:flex; flex-direction:column; justify-content:space-between; overflow:hidden; }
+        #homeView > main { flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; padding:clamp(8px,1.8vh,22px) clamp(16px,3vw,40px); }
+        #productGrid { width:min(100%,1040px); height:100%; max-height:calc(100svh - 270px); display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-items:center; justify-items:center; gap:clamp(12px,3vw,48px); }
+        .product-card { width:100%; height:100%; min-height:0; display:flex; align-items:center; justify-content:center; }
+        .product-frame { width:100%; height:100%; max-height: min(39vw, calc(100svh - 290px)); aspect-ratio:1 / 1; display:flex; align-items:center; justify-content:center; padding:clamp(8px,1.5vw,24px); overflow:hidden; }
+        .product-frame img { width:100%; height:100%; object-fit:contain; }
+        #marqueeSection { flex:0 0 auto; position:relative; top:-16px; padding:clamp(6px,1vh,12px) 0; max-height:min(24vh,210px); }
+        #marqueeSection .marquee-group { align-items:flex-end; }
+        #marqueeSection .marquee-photo { max-width:min(24vw,260px); }
+        #archiveView { min-height:calc(100svh - 58px); }
+        #archiveView > div:first-child { width:min(100%, 776px); margin-left:auto; margin-right:auto; }
+        @media (min-width:768px) {
+            #productGrid { max-height:calc(100svh - 275px); }
+            #marqueeSection .marquee-photo { max-width:min(24vw,260px); }
+        }
+        @media (max-width:767px) {
+            #siteHeader { height:52px; flex-basis:52px; padding:0 16px; font-size:12px; }
+            #siteHeader nav { gap:14px; }
+            #homeView { min-height:calc(100svh - 52px); height:calc(100svh - 52px); }
+            #homeView > main { padding:8px 12px 4px; }
+            #productGrid { width:100%; max-height:none; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+            .product-frame { max-height: min(48vw, calc(100svh - 220px)); padding:4px; }
+            #marqueeSection { top:-8px; padding:6px 0 max(6px, env(safe-area-inset-bottom)); max-height:22vh; }
+            #marqueeSection .marquee-group { gap:10px; padding-right:10px; }
+            #marqueeSection .marquee-photo { max-width:42vw; }
+            #marqueeSection .marquee-photo.is-portrait { --marquee-photo-height:clamp(90px, 16.5vh, 120px); }
+            #marqueeSection .marquee-photo.is-landscape, #marqueeSection .marquee-photo.is-square { --marquee-photo-height:clamp(60px, 11vh, 80px); }
+            #archiveView { padding:22px 14px 36px; }
+            #archiveView > div:first-child { width:100%; }
+            .archive-grid { width:100%; grid-template-columns:repeat(2,minmax(0,1fr)); column-gap:10px; row-gap:24px; }
+            #lightbox { padding: max(16px,env(safe-area-inset-top)) 12px max(16px,env(safe-area-inset-bottom)); }
+            #lightboxImg { max-height:72svh; }
+        }
+        @media (max-height:650px) and (min-width:768px) {
+            #siteHeader { height:48px; flex-basis:48px; }
+            #homeView { min-height:calc(100svh - 48px); height:calc(100svh - 48px); }
+            #productGrid { max-height:calc(100svh - 180px); }
+            #marqueeSection { max-height:22vh; }
+            #marqueeSection .marquee-photo.is-portrait { --marquee-photo-height:clamp(110px, 19.53vh, 150px); }
+            #marqueeSection .marquee-photo.is-landscape, #marqueeSection .marquee-photo.is-square { --marquee-photo-height:clamp(73px, 13.02vh, 100px); }
+        }
+
+        /* Dedicated archive is a separate view, not an anchor below the home page. */
+        #archiveView { display:block; }
+        #archiveView.hidden { display:none; }
+        #homeView.hidden { display:none; }
+
+        /* Standard shopping-cart drawer */
+        .cart-overlay { position:fixed; inset:0; z-index:80; background:rgba(20,20,20,.24); opacity:0; visibility:hidden; backdrop-filter:blur(5px); -webkit-backdrop-filter:blur(5px); transition:opacity .28s ease, visibility .28s ease; }
+        .cart-overlay.is-open { opacity:1; visibility:visible; }
+        .cart-drawer { position:fixed; z-index:81; top:0; right:0; width:min(440px,92vw); height:100dvh; background:#fff; box-shadow:-12px 0 40px rgba(0,0,0,.10); transform:translateX(102%); transition:transform .32s cubic-bezier(.2,.75,.25,1); display:flex; flex-direction:column; padding:clamp(20px,3vw,32px); padding-top:max(clamp(20px,3vw,32px),env(safe-area-inset-top)); padding-bottom:max(clamp(20px,3vw,32px),env(safe-area-inset-bottom)); }
+        .cart-drawer.is-open { transform:translateX(0); }
+        .cart-drawer-header { display:flex; align-items:center; justify-content:center; padding-bottom:22px; border-bottom:1px solid #ededed; }
+        .cart-close { width:100%; min-height:34px; display:flex; align-items:center; justify-content:center; border:0; border-radius:0; background:transparent; padding:0; font:inherit; font-size:18px; font-weight:400; line-height:1; cursor:pointer; }
+        .cart-contents { flex:1; min-height:0; overflow:auto; }
+        .cart-empty { min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px 8px; }
+        .cart-continue { border:1px solid #171717; background:#171717; color:#fff; padding:12px 20px; font-size:11px; letter-spacing:.04em; cursor:pointer; transition:opacity .2s; }
+        .cart-continue:hover { opacity:.8; }
+        .cart-drawer-footer { border-top:1px solid #ededed; padding-top:18px; }
+        .cart-subtotal { display:flex; justify-content:space-between; align-items:center; font-size:13px; }
+        .cart-subtotal strong { font-size:14px; font-weight:500; }
+        .cart-checkout { width:100%; border:0; padding:15px; background:#171717; color:#fff; font-size:11px; letter-spacing:.08em; cursor:pointer; }
+        .cart-checkout:disabled { background:#e7e7e7; color:#999; cursor:not-allowed; }
+        .cart-items { padding:18px 0; }
+        .cart-item { display:grid; grid-template-columns:76px 1fr auto; gap:13px; padding:14px 0; border-bottom:1px solid #eee; }
+        .cart-item img { width:76px; height:92px; object-fit:contain; background:transparent; display:block; }
+        .cart-item-title { font-size:12px; font-weight:500; margin:2px 0 7px; }
+        .cart-item-price { font-size:11px; color:#777; }
+        .cart-item-controls { display:flex; align-items:center; gap:10px; margin-top:12px; }
+        .cart-item-controls button { border:0; background:none; padding:2px 5px; color:#555; cursor:pointer; }
+        .cart-item-remove { align-self:start; border:0; background:none; color:#999; font-size:18.7px; line-height:1; cursor:pointer; }
+        @media (max-width:767px) { .cart-drawer { width:min(420px,94vw); } }
+
+
+        /* Minimal product detail pages */
+        .product-card { border:0; padding:0; background:transparent; }
+        .product-detail { position:fixed; inset:58px 16px 16px; z-index:70; background:#fff; border:1px solid #222; padding:clamp(18px,3vw,42px); overflow:auto; }
+        .product-detail.hidden { display:none; }
+        .detail-back { border:0; background:none; padding:0; font:inherit; font-size:12px; cursor:pointer; }
+        .detail-layout { min-height:calc(100% - 28px); display:grid; grid-template-columns:minmax(0,1.25fr) minmax(260px,.75fr); align-items:center; gap:clamp(24px,6vw,90px); max-width:1200px; margin:0 auto; }
+        .detail-image-wrap { width:100%; height:min(68vh,720px); display:flex; align-items:center; justify-content:center; }
+        .detail-image-wrap img { width:100%; height:100%; object-fit:contain; }
+        .detail-info { max-width:360px; }
+        .detail-info h1 { font-size:clamp(30px,4vw,52px); line-height:1.08; letter-spacing:-.055em; font-weight:400; margin:0 0 12px; }
+        .detail-price { font-size:16px; margin:0 0 46px; }
+        .detail-add { width:100%; max-width:180px; height:48px; border:0; background:#050505; color:#fff; font-size:27px; line-height:1; cursor:pointer; }
+        .detail-add:hover { background:#292929; }
+        @media (max-width:767px) {
+            .product-detail { inset:52px 8px 8px; padding:18px; }
+            .detail-layout { grid-template-columns:1fr; grid-template-rows:minmax(0,1fr) auto; gap:12px; }
+            .detail-image-wrap { height:min(52svh,480px); }
+            .detail-info { max-width:none; padding-bottom:12px; }
+            .detail-info h1 { font-size:30px; }
+            .detail-price { margin-bottom:20px; }
+            .detail-add { max-width:none; }
+        }
+
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between bg-white text-neutral-900 select-none">
+
+    <!-- Header -->
+    <header id="siteHeader" class="w-full flex justify-between items-center text-sm">
+        <a href="https://www.instagram.com/eoekzm/" target="_blank" rel="noopener noreferrer" class="font-medium tracking-tight hover:opacity-75 transition">@eoekzm</a>
+        <nav class="flex items-center space-x-6" aria-label="Main navigation">
+            <a href="#home" id="homeLink" class="hover:opacity-75 transition">Home</a>
+            <a href="#archive" id="archiveLink" class="hover:opacity-75 transition">Archive</a>
+            <button type="button" id="cartOpen" class="hover:opacity-75 transition" aria-haspopup="dialog" aria-controls="cartDrawer">Cart (<span id="cartCount">0</span>)</button>
+        </nav>
+    </header>
+
+    <div id="homeView">
+    <!-- Main Content Area: Product Showcase (T-shirts) -->
+    <main>
+        <div id="productGrid">
+            <!-- T-Shirt 1 -->
+            <button type="button" class="product-card group cursor-pointer" onclick="openProductDetail('damaged')" aria-label="View Damaged Beyond Repair">
+                <div class="product-frame bg-white rounded-lg transition">
+                    <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=88" alt="White T-Shirt" class="w-4/5 h-4/5 object-contain group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=88'">
+                </div>
+            </button>
+            <!-- T-Shirt 2 -->
+            <button type="button" class="product-card group cursor-pointer" onclick="openProductDetail('fear')" aria-label="View Fear and Glory">
+                <div class="product-frame bg-white rounded-lg transition">
+                    <img src="https://images.unsplash.com/photo-1564859228273-274232fdb516?auto=format&fit=crop&w=1200&q=88" alt="Black T-Shirt" class="w-4/5 h-4/5 object-contain group-hover:scale-105 transition duration-300" onerror="this.src='https://images.unsplash.com/photo-1564859228273-274232fdb516?auto=format&fit=crop&w=1200&q=88'">
+                </div>
+            </button>
+        </div>
+    </main>
+
+    <!-- Bottom Marquee Gallery -->
+    <section id="marqueeSection" class="w-full overflow-hidden border-f border-neutral-100 bg-clear marquee-container relative" aria-label="Moving photo gallery">
+        <div class="marquee-track flex gap-4 cursor-pointer" id="marqueeTrack">
+            <!-- Photos will be dynamically populated via JavaScript to ensure seamless infinite looping -->
+        </div>
+    </section>
+    </div>
+
+    <!-- Dedicated Archive Gallery -->
+    <main id="archiveView" class="hidden w-full max-w-6xl mx-auto px-4 md:px-6 py-8">
+        <div class="flex items-center justify-between mb-6">
+            <h1 class="text-sm font-medium tracking-wide">Archive</h1>
+            <span class="text-xs text-neutral-400" id="archivePhotoCount"></span>
+        </div>
+        <div id="archiveGrid" class="archive-grid"></div>
+    </main>
+
+    <!-- Lightbox Modal -->
+    <div id="lightbox" class="fixed inset-0 z-50 bg-white/95 backdrop-blur-sm hidden flex flex-col justify-between p-6 md:p-10">
+        <!-- Top bar with Close button -->
+        <div class="w-full flex justify-between items-center max-w-7xl mx-auto">
+            <span class="text-xs text-neutral-400 font-mono" id="imageCounter">1 / 12</span>
+            <button id="closeLightbox" class="text-xs uppercase tracking-widest font-medium px-3 py-1.5 border border-neutral-200 rounded hover:bg-neutral-100 transition">
+                Close ×
+            </button>
+        </div>
+
+        <!-- Center Image and Nav Arrows -->
+        <div class="relative flex-grow flex items-center justify-center max-w-5xl mx-auto w-full my-4">
+            <!-- Left Arrow -->
+            <button id="prevBtn" class="absolute left-0 md:-left-12 z-10 p-3 text-neutral-800 hover:scale-125 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"></path></svg>
+            </button>
+
+            <!-- Lightbox Image -->
+            <div class="lightbox-fade max-h-[75vh] flex items-center justify-center">
+                <img id="lightboxImg" src="" alt="Archive Fullscreen" class="max-h-[75vh] max-w-full object-contain rounded shadow-sm">
+            </div>
+
+            <!-- Right Arrow -->
+            <button id="nextBtn" class="absolute right-0 md:-right-12 z-10 p-3 text-neutral-800 hover:scale-125 transition">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"></path></svg>
+            </button>
+        </div>
+
+        <!-- Bottom spacer for balance -->
+        <div class="w-full h-6"></div>
+    </div>
+
+    <!-- Product detail view for the two test products -->
+    <div id="productDetail" class="product-detail hidden" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+        <button type="button" class="detail-back" onclick="closeProductDetail()">← Back</button>
+        <div class="detail-layout">
+            <div class="detail-image-wrap"><img id="detailImage" src="" alt=""></div>
+            <div class="detail-info">
+                <h1 id="detailTitle"></h1>
+                <p id="detailPrice" class="detail-price"></p>
+                <button type="button" id="detailAdd" class="detail-add" aria-label="Add to cart">+</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cart drawer: right-side panel with blurred backdrop -->
+    <div id="cartOverlay" class="cart-overlay" aria-hidden="true"></div>
+    <aside id="cartDrawer" class="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cartTitle" aria-hidden="true">
+        <div class="cart-drawer-header">
+            <button type="button" id="cartClose" class="cart-close" aria-label="Close cart">x</button>
+        </div>
+        <div id="cartContents" class="cart-contents">
+            <div id="cartEmpty" class="cart-empty"></div>
+            <div id="cartItems" class="cart-items hidden"></div>
+        </div>
+        <div class="cart-drawer-footer">
+            <div class="cart-subtotal"><span>Subtotal</span><strong id="cartSubtotal">₩0</strong></div>
+            <button type="button" id="cartCheckout" class="cart-checkout" disabled>Checkout</button>
+        </div>
+    </aside>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // Archive photos dataset (mimicking the aesthetic reference)
+        const photos = [
+            { id: 1, url: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=1000&auto=format&fit=crop", title: "Nature & Greenery" },
+            { id: 2, url: "https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=1000&auto=format&fit=crop", title: "Foggy Balcony View" },
+            { id: 3, url: "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?q=80&w=1000&auto=format&fit=crop", title: "Dense Forest Canopy" },
+            { id: 4, url: "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop", title: "Minimal Texture" },
+            { id: 5, url: "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?q=80&w=1000&auto=format&fit=crop", title: "Courtyard Architecture" },
+            { id: 6, url: "https://images.unsplash.com/photo-1519501025264-65ba15a82390?q=80&w=1000&auto=format&fit=crop", title: "City Lights at Night" },
+            { id: 7, url: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=1000&auto=format&fit=crop", title: "Mountain Canyon" },
+            { id: 8, url: "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1000&auto=format&fit=crop", title: "Industrial Glow" },
+            { id: 9, url: "https://images.unsplash.com/photo-1542224566-6e85f2e6772f?q=80&w=1000&auto=format&fit=crop", title: "Tree Textures" },
+            { id: 10, url: "https://images.unsplash.com/photo-1483347756197-71ef80e95f73?q=80&w=1000&auto=format&fit=crop", title: "Winter Frost" }
+        ];
+
+        let currentIndex = 0;
+        const track = document.getElementById('marqueeTrack');
+        const lightbox = document.getElementById('lightbox');
+        const lightboxImg = document.getElementById('lightboxImg');
+        const imageCounter = document.getElementById('imageCounter');
+        const closeLightbox = document.getElementById('closeLightbox');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const homeView = document.getElementById('homeView');
+        const archiveView = document.getElementById('archiveView');
+        const archiveGrid = document.getElementById('archiveGrid');
+        const archivePhotoCount = document.getElementById('archivePhotoCount');
+        const archiveLink = document.getElementById('archiveLink');
+        const homeLink = document.getElementById('homeLink');
+
+        // Cart drawer controls. Product data can be connected when prices/SKUs are supplied.
+        const cartOpen = document.getElementById('cartOpen');
+        const cartClose = document.getElementById('cartClose');
+        const cartOverlay = document.getElementById('cartOverlay');
+        const cartDrawer = document.getElementById('cartDrawer');
+        const cartItemsEl = document.getElementById('cartItems');
+        const cartEmpty = document.getElementById('cartEmpty');
+        const cart = [];
+
+        function openCart() {
+            cartOverlay.classList.add('is-open');
+            cartDrawer.classList.add('is-open');
+            cartOverlay.setAttribute('aria-hidden', 'false');
+            cartDrawer.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            cartClose.focus();
+        }
+        function closeCart() {
+            cartOverlay.classList.remove('is-open');
+            cartDrawer.classList.remove('is-open');
+            cartOverlay.setAttribute('aria-hidden', 'true');
+            cartDrawer.setAttribute('aria-hidden', 'true');
+            if (lightbox.classList.contains('hidden')) document.body.style.overflow = '';
+            cartOpen.focus();
+        }
+        function formatWon(value) { return new Intl.NumberFormat('ko-KR').format(value) + '원'; }
+        function renderCart() {
+            const quantity = cart.reduce((total, item) => total + item.quantity, 0);
+            const subtotal = cart.reduce((total, item) => total + item.price * item.quantity, 0);
+            document.getElementById('cartCount').textContent = quantity;
+            document.getElementById('cartSubtotal').textContent = formatWon(subtotal);
+            cartEmpty.classList.toggle('hidden', cart.length > 0);
+            cartItemsEl.classList.toggle('hidden', cart.length === 0);
+            document.getElementById('cartCheckout').disabled = cart.length === 0;
+            cartItemsEl.innerHTML = cart.map((item, index) => `
+                <div class="cart-item">
+                    <img src="${item.image}" alt="${item.name}">
+                    <div>
+                        <p class="cart-item-title">${item.name}</p>
+                        <p class="cart-item-price">${formatWon(item.price)}</p>
+                        <div class="cart-item-controls">
+                            <button type="button" aria-label="Decrease quantity" onclick="changeCartQuantity(${index},-1)">−</button>
+                            <span>${item.quantity}</span>
+                            <button type="button" aria-label="Increase quantity" onclick="changeCartQuantity(${index},1)">+</button>
+                        </div>
+                    </div>
+                    <button type="button" class="cart-item-remove" onclick="removeCartItem(${index})" aria-label="Remove item">x</button>
+                </div>`).join('');
+        }
+        window.addToCart = function(product) {
+            if (!product || !product.id || !Number.isFinite(Number(product.price))) return;
+            const existing = cart.find(item => item.id === product.id);
+            if (existing) existing.quantity += 1;
+            else cart.push({ id: product.id, name: product.name || 'Item', price: Number(product.price), image: product.image || '', quantity: 1 });
+            renderCart();
+            openCart();
+        };
+        window.changeCartQuantity = function(index, delta) {
+            if (!cart[index]) return;
+            cart[index].quantity += delta;
+            if (cart[index].quantity <= 0) cart.splice(index, 1);
+            renderCart();
+        };
+        window.removeCartItem = function(index) { cart.splice(index, 1); renderCart(); };
+        cartOpen.addEventListener('click', openCart);
+        cartClose.addEventListener('click', closeCart);
+        cartOverlay.addEventListener('click', closeCart);
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && cartDrawer.classList.contains('is-open')) closeCart();
+        });
+        renderCart();
+
+        const productDetail = document.getElementById('productDetail');
+        const detailImage = document.getElementById('detailImage');
+        const detailTitle = document.getElementById('detailTitle');
+        const detailPrice = document.getElementById('detailPrice');
+        const detailAdd = document.getElementById('detailAdd');
+        const products = {
+            damaged: { id:'damaged', name:'Damaged Beyond Repair', price:55000, image:'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=1200&q=88' },
+            fear: { id:'fear', name:'Fear and Glory', price:55000, image:'https://images.unsplash.com/photo-1564859228273-274232fdb516?auto=format&fit=crop&w=1200&q=88' }
+        };
+        let selectedProduct = null;
+        window.openProductDetail = function(id) {
+            selectedProduct = products[id];
+            if (!selectedProduct) return;
+            detailImage.src = selectedProduct.image;
+            detailImage.alt = selectedProduct.name;
+            detailTitle.textContent = selectedProduct.name;
+            detailPrice.textContent = formatWon(selectedProduct.price);
+            productDetail.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        };
+        window.closeProductDetail = function() {
+            productDetail.classList.add('hidden');
+            document.body.style.overflow = '';
+        };
+        detailAdd.addEventListener('click', () => {
+            if (!selectedProduct) return;
+            window.addToCart(selectedProduct);
+            closeProductDetail();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !productDetail.classList.contains('hidden')) closeProductDetail();
+        });
+
+        function showHome() {
+            archiveView.classList.add('hidden');
+            homeView.classList.remove('hidden');
+            document.body.classList.remove('archive-mode');
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+
+        function showArchive() {
+            // Switch views completely: the home marquee is hidden, not scrolled past.
+            homeView.classList.add('hidden');
+            archiveView.classList.remove('hidden');
+            document.body.classList.add('archive-mode');
+            renderArchiveGrid();
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        }
+
+        archiveLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            showArchive();
+            history.pushState({ view: 'archive' }, '', '#archive');
+        });
+
+        homeLink.addEventListener('click', (event) => {
+            event.preventDefault();
+            showHome();
+            history.pushState({ view: 'home' }, '', '#home');
+        });
+
+        // Keep each image's original aspect ratio while sizing by orientation.
+        function classifyMarqueePhoto(img) {
+            const ratio = img.naturalWidth / img.naturalHeight;
+            img.classList.remove('is-portrait', 'is-landscape', 'is-square');
+            if (ratio < 0.95) img.classList.add('is-portrait');
+            else if (ratio > 1.05) img.classList.add('is-landscape');
+            else img.classList.add('is-square');
+        }
+
+        // Populate marquee with duplicate sets for infinite smooth looping
+        function renderMarquee() {
+            // Two identical groups make the -50% animation loop seamlessly.
+            const groupHTML = photos.map((photo, idx) => `
+                <div class="flex-shrink-0 rounded bg-white cursor-pointer group relative" onclick="openLightbox(${idx})">
+                    <img src="${photo.url}" alt="${photo.title}" class="marquee-photo" loading="eager" onload="classifyMarqueePhoto(this)">
+                </div>
+            `).join('');
+
+            track.innerHTML = `
+                <div class="marquee-group">${groupHTML}</div>
+                <div class="marquee-group" aria-hidden="true">${groupHTML}</div>
+            `;
+        }
+
+        // Render the full archive as a static two-column grid.
+        function renderArchiveGrid() {
+            archivePhotoCount.textContent = `${photos.length} photos`;
+            archiveGrid.innerHTML = photos.map((photo, idx) => `
+                <button type="button" class="block text-left" onclick="openLightbox(${idx})" aria-label="Open ${photo.title}">
+                    <img src="${photo.url}" alt="${photo.title}" class="archive-photo" loading="lazy">
+                    <span class="archive-caption mt-2 text-xs text-neutral-500">${photo.title}</span>
+                </button>
+            `).join('');
+        }
+
+        // Open Lightbox
+        window.openLightbox = function(index) {
+            currentIndex = index;
+            updateLightboxContent();
+            lightbox.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        // Update Lightbox Image and Counter
+        function updateLightboxContent() {
+            lightboxImg.src = photos[currentIndex].url;
+            imageCounter.textContent = `${currentIndex + 1} / ${photos.length}`;
+        }
+
+        // Close Lightbox
+        function closeLightboxModal() {
+            lightbox.classList.add('hidden');
+            document.body.style.overflow = 'auto';
+        }
+
+        closeLightbox.addEventListener('click', closeLightboxModal);
+
+        // Navigation in Lightbox
+        prevBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentIndex = (currentIndex - 1 + photos.length) % photos.length;
+            updateLightboxContent();
+        });
+
+        nextBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentIndex = (currentIndex + 1) % photos.length;
+            updateLightboxContent();
+        });
+
+        // Close on background click or Escape key
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox) {
+                closeLightboxModal();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (lightbox.classList.contains('hidden')) return;
+            if (e.key === 'Escape') closeLightboxModal();
+            if (e.key === 'ArrowLeft') {
+                currentIndex = (currentIndex - 1 + photos.length) % photos.length;
+                updateLightboxContent();
+            }
+            if (e.key === 'ArrowRight') {
+                currentIndex = (currentIndex + 1) % photos.length;
+                updateLightboxContent();
+            }
+        });
+
+        // Initialize on load
+        function syncViewFromUrl() {
+            if (window.location.hash === '#archive') showArchive();
+            else showHome();
+        }
+        window.addEventListener('hashchange', syncViewFromUrl);
+        window.addEventListener('popstate', syncViewFromUrl);
+
+        window.onload = function() {
+            renderMarquee();
+            renderArchiveGrid();
+            if (window.location.hash === '#archive') showArchive();
+            else showHome();
+        };
+    </script>
+</body>
+</html>
